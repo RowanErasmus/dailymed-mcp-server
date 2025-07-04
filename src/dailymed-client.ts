@@ -8,6 +8,17 @@ export interface DailyMedResponse<T = any> {
   statusText: string;
 }
 
+export interface FilteredRxNormMapping {
+  rxcui: string;
+  rxstring: string;
+  rxtty: string;
+}
+
+export interface FilteredPharmacologicClassMapping {
+  pharmaSetId: string;
+  pharmaVersion: number;
+}
+
 export interface SPLDocument {
   setId: string;
   title: string;
@@ -17,8 +28,43 @@ export interface SPLDocument {
   spl_medguide?: string;
   spl_patient_package_insert?: string;
   spl_product_data_elements?: string;
-  rxNormMappings?: RxNormMapping[];
-  pharmacologicClassMappings?: PharmacologicClassMapping[];
+  rxNormMappings?: FilteredRxNormMapping[];
+  pharmacologicClassMappings?: FilteredPharmacologicClassMapping[];
+}
+
+export interface PaginatedSPLResponse {
+  data: SPLDocument[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalResults: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+export interface AdvancedSPLSearchParams {
+  query?: string;
+  application_number?: string;
+  boxed_warning?: boolean;
+  dea_schedule_code?: string;
+  doctype?: string;
+  drug_class_code?: string;
+  drug_class_coding_system?: string;
+  drug_name?: string;
+  name_type?: "g" | "generic" | "b" | "brand" | "both";
+  labeler?: string;
+  manufacturer?: string;
+  marketing_category_code?: string;
+  ndc?: string;
+  published_date?: string;
+  published_date_comparison?: "lt" | "lte" | "gt" | "gte" | "eq";
+  rxcui?: string;
+  setid?: string;
+  unii_code?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface SPLSection {
@@ -578,6 +624,18 @@ export class DailyMedClient {
             const rxNormMappings = this.mappingService.getRxNormMappings(setId);
             const pharmacologicClassMappings = this.mappingService.getPharmacologicClassMappings(setId);
 
+            // Filter out redundant fields from mappings
+            const filteredRxNormMappings = rxNormMappings.map(mapping => ({
+              rxcui: mapping.rxcui,
+              rxstring: mapping.rxstring,
+              rxtty: mapping.rxtty,
+            }));
+
+            const filteredPharmacologicClassMappings = pharmacologicClassMappings.map(mapping => ({
+              pharmaSetId: mapping.pharmaSetId,
+              pharmaVersion: mapping.pharmaVersion,
+            }));
+
             resolve({
               setId: setId,
               title: title || "No title available",
@@ -587,8 +645,8 @@ export class DailyMedClient {
               spl_medguide: undefined,
               spl_patient_package_insert: undefined,
               spl_product_data_elements: undefined,
-              rxNormMappings: rxNormMappings.length > 0 ? rxNormMappings : undefined,
-              pharmacologicClassMappings: pharmacologicClassMappings.length > 0 ? pharmacologicClassMappings : undefined,
+              rxNormMappings: filteredRxNormMappings.length > 0 ? filteredRxNormMappings : undefined,
+              pharmacologicClassMappings: filteredPharmacologicClassMappings.length > 0 ? filteredPharmacologicClassMappings : undefined,
             });
           } catch (parseError) {
             reject(
@@ -824,47 +882,217 @@ export class DailyMedClient {
     }
   }
 
-  async searchSPLs(query: string): Promise<SPLDocument[]> {
-    if (!query || typeof query !== "string") {
-      throw new Error("Valid query string is required");
+  async searchSPLs(params: AdvancedSPLSearchParams): Promise<PaginatedSPLResponse> {
+    const { page = 1, pageSize = 25, query, ...advancedParams } = params;
+
+    // Validate pagination parameters
+    if (page < 1) {
+      throw new Error("Page number must be 1 or greater");
+    }
+    if (pageSize < 1 || pageSize > 200) {
+      throw new Error("Page size must be between 1 and 200");
+    }
+
+    // Check if this is a simple query or advanced search
+    const hasAdvancedParams = Object.values(advancedParams).some(value => value !== undefined);
+    const isSimpleQuery = query && !hasAdvancedParams;
+
+    if (!isSimpleQuery && !hasAdvancedParams) {
+      throw new Error("Either 'query' or at least one advanced parameter is required");
     }
 
     try {
-      const response = await this.client.get("/spls.json", {
-        params: { drug_name: query },
-      });
-
-      if (
-        response.data &&
-        response.data.data &&
-        Array.isArray(response.data.data)
-      ) {
-        return response.data.data.map((item: any) => {
-          const setId = item.setid;
-          const rxNormMappings = this.mappingService.getRxNormMappings(setId);
-          const pharmacologicClassMappings = this.mappingService.getPharmacologicClassMappings(setId);
-
-          return {
-            setId: setId,
-            title: item.title,
-            effectiveTime: item.published_date,
-            versionNumber: item.spl_version?.toString() || "1",
-            sections: [],
-            spl_medguide: item.spl_medguide,
-            spl_patient_package_insert: item.spl_patient_package_insert,
-            spl_product_data_elements: item.spl_product_data_elements,
-            rxNormMappings: rxNormMappings.length > 0 ? rxNormMappings : undefined,
-            pharmacologicClassMappings: pharmacologicClassMappings.length > 0 ? pharmacologicClassMappings : undefined,
-          };
-        });
+      if (isSimpleQuery) {
+        // Use the existing drug name search approach
+        return await this.searchSPLsByDrugName(query!, page, pageSize);
       } else {
-        throw new Error("Unexpected response structure for SPL search");
+        // Use advanced DailyMed SPLs API search
+        return await this.searchSPLsAdvanced(params);
       }
     } catch (error) {
       throw new Error(
         `Failed to search SPLs: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
+  }
+
+  private async searchSPLsByDrugName(query: string, page: number, pageSize: number): Promise<PaginatedSPLResponse> {
+    // First search for drugs by name or active ingredient
+    const drugs = await this.searchDrugNames(query);
+    
+    // If no drugs found, return empty paginated response
+    if (drugs.length === 0) {
+      return {
+        data: [],
+        pagination: {
+          page: 1,
+          pageSize,
+          totalResults: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      };
+    }
+
+    // Collect all unique drug names (including active ingredients)
+    const drugQueries = new Set<string>();
+    drugs.forEach(drug => {
+      drugQueries.add(drug.drugName);
+      if (drug.activeIngredient) {
+        drugQueries.add(drug.activeIngredient);
+      }
+    });
+
+    // Search for SPLs using each drug name/ingredient
+    const allSPLs = new Map<string, SPLDocument>();
+    
+    for (const drugQuery of drugQueries) {
+      try {
+        const response = await this.client.get("/spls.json", {
+          params: { drug_name: drugQuery },
+        });
+
+        if (
+          response.data &&
+          response.data.data &&
+          Array.isArray(response.data.data)
+        ) {
+          response.data.data.forEach((item: any) => {
+            const setId = item.setid;
+            
+            // Avoid duplicates by using setId as key
+            if (!allSPLs.has(setId)) {
+              const splDoc = this.createSPLDocumentFromItem(item);
+              allSPLs.set(setId, splDoc);
+            }
+          });
+        }
+      } catch (error) {
+        // Continue with other drug queries if one fails
+        console.error(`Failed to search SPLs for "${drugQuery}": ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
+    }
+
+    // Convert to array and apply pagination
+    const allSPLsArray = Array.from(allSPLs.values());
+    return this.paginateResults(allSPLsArray, page, pageSize);
+  }
+
+  private async searchSPLsAdvanced(params: AdvancedSPLSearchParams): Promise<PaginatedSPLResponse> {
+    const { page = 1, pageSize = 25 } = params;
+
+    // Build query parameters for DailyMed API
+    const queryParams: any = {};
+    
+    // API pagination (DailyMed has max 100 per page)
+    const apiPageSize = Math.min(pageSize, 100);
+    queryParams.pagesize = apiPageSize;
+    queryParams.page = page;
+
+    // Add all advanced search parameters
+    if (params.application_number) queryParams.application_number = params.application_number;
+    if (params.boxed_warning !== undefined) queryParams.boxed_warning = params.boxed_warning.toString();
+    if (params.dea_schedule_code) queryParams.dea_schedule_code = params.dea_schedule_code;
+    if (params.doctype) queryParams.doctype = params.doctype;
+    if (params.drug_class_code) queryParams.drug_class_code = params.drug_class_code;
+    if (params.drug_class_coding_system) queryParams.drug_class_coding_system = params.drug_class_coding_system;
+    if (params.drug_name) queryParams.drug_name = params.drug_name;
+    if (params.name_type) queryParams.name_type = params.name_type;
+    if (params.labeler) queryParams.labeler = params.labeler;
+    if (params.manufacturer) queryParams.manufacturer = params.manufacturer;
+    if (params.marketing_category_code) queryParams.marketing_category_code = params.marketing_category_code;
+    if (params.ndc) queryParams.ndc = params.ndc;
+    if (params.published_date) queryParams.published_date = params.published_date;
+    if (params.published_date_comparison) queryParams.published_date_comparison = params.published_date_comparison;
+    if (params.rxcui) queryParams.rxcui = params.rxcui;
+    if (params.setid) queryParams.setid = params.setid;
+    if (params.unii_code) queryParams.unii_code = params.unii_code;
+
+    const response = await this.client.get("/spls.json", {
+      params: queryParams,
+    });
+
+    if (
+      response.data &&
+      response.data.data &&
+      Array.isArray(response.data.data)
+    ) {
+      const splDocs = response.data.data.map((item: any) => this.createSPLDocumentFromItem(item));
+      
+      // DailyMed API handles pagination for us in advanced mode
+      const totalResults = response.data.metadata?.total_elements || splDocs.length;
+      const totalPages = Math.ceil(totalResults / pageSize);
+      
+      return {
+        data: splDocs,
+        pagination: {
+          page,
+          pageSize,
+          totalResults,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+    } else {
+      throw new Error("Unexpected response structure for advanced SPL search");
+    }
+  }
+
+  private createSPLDocumentFromItem(item: any): SPLDocument {
+    const setId = item.setid;
+    const rxNormMappings = this.mappingService.getRxNormMappings(setId);
+    const pharmacologicClassMappings = this.mappingService.getPharmacologicClassMappings(setId);
+
+    // Filter out redundant fields from mappings
+    const filteredRxNormMappings = rxNormMappings.map(mapping => ({
+      rxcui: mapping.rxcui,
+      rxstring: mapping.rxstring,
+      rxtty: mapping.rxtty,
+    }));
+
+    const filteredPharmacologicClassMappings = pharmacologicClassMappings.map(mapping => ({
+      pharmaSetId: mapping.pharmaSetId,
+      pharmaVersion: mapping.pharmaVersion,
+    }));
+
+    return {
+      setId: setId,
+      title: item.title,
+      effectiveTime: item.published_date,
+      versionNumber: item.spl_version?.toString() || "1",
+      sections: [],
+      spl_medguide: item.spl_medguide,
+      spl_patient_package_insert: item.spl_patient_package_insert,
+      spl_product_data_elements: item.spl_product_data_elements,
+      rxNormMappings: filteredRxNormMappings.length > 0 ? filteredRxNormMappings : undefined,
+      pharmacologicClassMappings: filteredPharmacologicClassMappings.length > 0 ? filteredPharmacologicClassMappings : undefined,
+    };
+  }
+
+  private paginateResults(allResults: SPLDocument[], page: number, pageSize: number): PaginatedSPLResponse {
+    const totalResults = allResults.length;
+    const totalPages = Math.ceil(totalResults / pageSize);
+    
+    // Calculate pagination indices
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    
+    // Get the paginated slice
+    const paginatedData = allResults.slice(startIndex, endIndex);
+
+    return {
+      data: paginatedData,
+      pagination: {
+        page,
+        pageSize,
+        totalResults,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   // Mapping service methods
@@ -986,9 +1214,17 @@ export class DailyMedClient {
     };
   }
 
-  async searchDrugsByPharmacologicClass(drugClassCode: string, codingSystem?: string): Promise<SPLDocument[]> {
+  async searchDrugsByPharmacologicClass(drugClassCode: string, codingSystem?: string, page: number = 1, pageSize: number = 25): Promise<PaginatedSPLResponse> {
     if (!drugClassCode || typeof drugClassCode !== "string") {
       throw new Error("Valid drug class code is required");
+    }
+
+    // Validate pagination parameters
+    if (page < 1) {
+      throw new Error("Page number must be 1 or greater");
+    }
+    if (pageSize < 1 || pageSize > 100) {
+      throw new Error("Page size must be between 1 and 100");
     }
 
     try {
@@ -996,7 +1232,9 @@ export class DailyMedClient {
       // Default to the coding system used by the drug classes API
       const params: any = { 
         drug_class_code: drugClassCode,
-        drug_class_coding_system: codingSystem || "2.16.840.1.113883.6.345"
+        drug_class_coding_system: codingSystem || "2.16.840.1.113883.6.345",
+        pagesize: pageSize,
+        page: page
       };
       
       const response = await this.client.get("/spls.json", {
@@ -1008,24 +1246,23 @@ export class DailyMedClient {
         response.data.data &&
         Array.isArray(response.data.data)
       ) {
-        return response.data.data.map((item: any) => {
-          const setId = item.setid;
-          const rxNormMappings = this.mappingService.getRxNormMappings(setId);
-          const pharmacologicClassMappings = this.mappingService.getPharmacologicClassMappings(setId);
-
-          return {
-            setId: setId,
-            title: item.title,
-            effectiveTime: item.published_date,
-            versionNumber: item.spl_version?.toString() || "1",
-            sections: [],
-            spl_medguide: item.spl_medguide,
-            spl_patient_package_insert: item.spl_patient_package_insert,
-            spl_product_data_elements: item.spl_product_data_elements,
-            rxNormMappings: rxNormMappings.length > 0 ? rxNormMappings : undefined,
-            pharmacologicClassMappings: pharmacologicClassMappings.length > 0 ? pharmacologicClassMappings : undefined,
-          };
-        });
+        const splDocs = response.data.data.map((item: any) => this.createSPLDocumentFromItem(item));
+        
+        // DailyMed API handles pagination for us
+        const totalResults = response.data.metadata?.total_elements || splDocs.length;
+        const totalPages = Math.ceil(totalResults / pageSize);
+        
+        return {
+          data: splDocs,
+          pagination: {
+            page,
+            pageSize,
+            totalResults,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPreviousPage: page > 1,
+          },
+        };
       } else {
         throw new Error("Unexpected response structure for drug class search");
       }

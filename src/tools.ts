@@ -10,20 +10,6 @@ export const dailyMedTools: Tool[] = [
     },
   },
   {
-    name: "search_drugs",
-    description: "Search for drugs by name or active ingredient",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description: "Search query for drug name or active ingredient",
-        },
-      },
-      required: ["query"],
-    },
-  },
-  {
     name: "get_drug_details",
     description: "Get detailed information about a specific drug by its SET ID",
     inputSchema: {
@@ -160,16 +146,99 @@ export const dailyMedTools: Tool[] = [
   },
   {
     name: "search_spls",
-    description: "Search for Structured Product Labels (SPLs) by title",
+    description: "Search for Structured Product Labels (SPLs) using either simple drug name search or advanced DailyMed API parameters. When using simple query, searches for drugs first then finds related SPLs. When using advanced parameters, queries DailyMed SPLs API directly. Supports pagination for large result sets.",
     inputSchema: {
       type: "object",
       properties: {
         query: {
           type: "string",
-          description: "Search query for SPL title",
+          description: "Simple search query for drug name or active ingredient (use this OR advanced parameters, not both)",
+        },
+        // Advanced DailyMed SPLs API parameters
+        application_number: {
+          type: "string",
+          description: "NDA number (e.g., 'NDA012345')",
+        },
+        boxed_warning: {
+          type: "boolean",
+          description: "Filter by presence of boxed warning",
+        },
+        dea_schedule_code: {
+          type: "string",
+          description: "DEA schedule code (e.g., 'none', 'C48672')",
+        },
+        doctype: {
+          type: "string",
+          description: "FDA document type",
+        },
+        drug_class_code: {
+          type: "string",
+          description: "Pharmacologic drug class code",
+        },
+        drug_class_coding_system: {
+          type: "string",
+          description: "Drug class coding system (default: '2.16.840.1.113883.3.26.1.5')",
+        },
+        drug_name: {
+          type: "string",
+          description: "Generic or brand drug name for direct API search",
+        },
+        name_type: {
+          type: "string",
+          description: "Name type filter",
+          enum: ["g", "generic", "b", "brand", "both"],
+        },
+        labeler: {
+          type: "string",
+          description: "Labeler name",
+        },
+        manufacturer: {
+          type: "string",
+          description: "Manufacturer name",
+        },
+        marketing_category_code: {
+          type: "string",
+          description: "FDA marketing category code",
+        },
+        ndc: {
+          type: "string",
+          description: "National Drug Code",
+        },
+        published_date: {
+          type: "string",
+          description: "Published date in YYYY-MM-DD format",
+        },
+        published_date_comparison: {
+          type: "string",
+          description: "Date comparison operator",
+          enum: ["lt", "lte", "gt", "gte", "eq"],
+        },
+        rxcui: {
+          type: "string",
+          description: "RxNorm Concept Unique Identifier",
+        },
+        setid: {
+          type: "string",
+          description: "Label Set ID",
+        },
+        unii_code: {
+          type: "string",
+          description: "Unique Ingredient Identifier",
+        },
+        // Pagination parameters
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 25, max: 100 for advanced queries, max: 200 for simple queries)",
+          minimum: 1,
+          maximum: 200,
         },
       },
-      required: ["query"],
+      required: [],
     },
   },
   {
@@ -350,7 +419,7 @@ export const dailyMedTools: Tool[] = [
   },
   {
     name: "search_drugs_by_pharmacologic_class",
-    description: "Search for drugs using DailyMed drug class codes (from the drug classes API)",
+    description: "Search for drugs using DailyMed drug class codes (from the drug classes API). Supports pagination for large result sets.",
     inputSchema: {
       type: "object",
       properties: {
@@ -361,6 +430,17 @@ export const dailyMedTools: Tool[] = [
         codingSystem: {
           type: "string",
           description: "The coding system for the drug class code (defaults to 2.16.840.1.113883.6.345 which matches the drug classes API)",
+        },
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 25, max: 100)",
+          minimum: 1,
+          maximum: 100,
         },
       },
       required: ["drugClassCode"],

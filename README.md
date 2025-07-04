@@ -73,8 +73,7 @@ The server provides the following tools:
 
 #### Search Tools
 
-- `search_drugs` - Search for drugs by name or active ingredient
-- `search_spls` - Search for Structured Product Labels by title
+- `search_spls` - Search for Structured Product Labels (SPLs) using either simple drug name search or advanced DailyMed API parameters. Supports pagination and extensive filtering options.
 - `search_rxcuis` - Search for RxCUI codes using various parameters
 - `search_application_numbers` - Search for FDA application numbers (NDA, ANDA, etc.)
 - `search_drug_classes` - Search for pharmacologic drug classes
@@ -107,7 +106,126 @@ The server provides the following tools:
 - `get_rxnorm_mappings_by_pharmacologic_class` - Find RxNorm mappings for drugs in a specific pharmacologic class (uses mapping file data)
 - `get_all_pharmacologic_class_setids` - Get all pharmacologic class SET IDs with drug mappings (from mapping files)
 - `get_pharmacologic_class_details` - Get detailed information about a pharmacologic class (uses mapping file data)
-- `search_drugs_by_pharmacologic_class` - Search for drugs using DailyMed drug class codes from the drug classes API
+- `search_drugs_by_pharmacologic_class` - Search for drugs using DailyMed drug class codes from the drug classes API. Supports pagination for large result sets.
+
+### Advanced SPL Search
+
+The `search_spls` tool supports two modes of operation:
+
+#### 1. Simple Drug Name Search (Legacy Mode)
+Uses the original approach: searches for drugs first, then finds related SPLs.
+
+**Parameters:**
+- `query` (required): Search query for drug name or active ingredient
+- `page` (optional): Page number (1-based, default: 1)
+- `pageSize` (optional): Results per page (default: 25, max: 200)
+
+**Example:**
+```json
+{
+  "query": "aspirin",
+  "page": 1,
+  "pageSize": 25
+}
+```
+
+#### 2. Advanced DailyMed API Search (New Mode)
+Directly queries the DailyMed SPLs API with powerful filtering options.
+
+**Advanced Parameters:**
+- `application_number`: NDA number (e.g., "NDA012345")
+- `boxed_warning`: Filter by presence of boxed warning (boolean)
+- `dea_schedule_code`: DEA schedule code (e.g., "none", "C48672")
+- `doctype`: FDA document type
+- `drug_class_code`: Pharmacologic drug class code
+- `drug_name`: Generic or brand drug name for direct API search
+- `name_type`: Name type filter ("g", "generic", "b", "brand", "both")
+- `labeler`: Labeler name
+- `manufacturer`: Manufacturer name
+- `marketing_category_code`: FDA marketing category code
+- `ndc`: National Drug Code
+- `published_date`: Published date in YYYY-MM-DD format
+- `published_date_comparison`: Date comparison ("lt", "lte", "gt", "gte", "eq")
+- `rxcui`: RxNorm Concept Unique Identifier
+- `setid`: Label Set ID
+- `unii_code`: Unique Ingredient Identifier
+- `page`: Page number (default: 1)
+- `pageSize`: Results per page (default: 25, max: 100 for advanced queries)
+
+**Advanced Search Examples:**
+
+Find SPLs with boxed warnings:
+```json
+{
+  "boxed_warning": true,
+  "pageSize": 10
+}
+```
+
+Search by manufacturer:
+```json
+{
+  "manufacturer": "Pfizer",
+  "page": 1
+}
+```
+
+Find SPLs published after a specific date:
+```json
+{
+  "published_date": "2023-01-01",
+  "published_date_comparison": "gte"
+}
+```
+
+Search by RxCUI:
+```json
+{
+  "rxcui": "1191"
+}
+```
+
+**Response Format:**
+Both modes return the same paginated response structure:
+```json
+{
+  "data": [
+    // Array of SPL documents for the requested page
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 25,
+    "totalResults": 150,
+    "totalPages": 6,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  }
+}
+```
+
+### Additional Pagination Support
+
+The following tools also support pagination:
+
+#### `search_drugs_by_pharmacologic_class`
+Search for drugs using DailyMed drug class codes with pagination support.
+
+**Parameters:**
+- `drugClassCode` (required): The drug class code (e.g., "N0000175605" for Kinase Inhibitor)
+- `codingSystem` (optional): Coding system (defaults to DailyMed's system)
+- `page` (optional): Page number (1-based, default: 1)
+- `pageSize` (optional): Results per page (default: 25, max: 100)
+
+**Example:**
+```json
+{
+  "drugClassCode": "N0000175605",
+  "page": 1,
+  "pageSize": 50
+}
+```
+
+Returns the same paginated response format as `search_spls`.
 
 ### Configuration with Claude Desktop
 

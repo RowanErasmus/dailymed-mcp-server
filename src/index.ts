@@ -57,18 +57,6 @@ class DailyMedServer {
               ],
             };
 
-          case "search_drugs":
-            const searchResults = await this.client.searchDrugNames(
-              args.query as string,
-            );
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(searchResults, null, 2),
-                },
-              ],
-            };
 
           case "get_drug_details":
             const drugDetails = await this.client.getSPLBySetId(
@@ -221,9 +209,7 @@ class DailyMedServer {
             };
 
           case "search_spls":
-            const splResults = await this.client.searchSPLs(
-              args.query as string,
-            );
+            const splResults = await this.client.searchSPLs(args as any);
             return {
               content: [
                 {
@@ -399,6 +385,8 @@ class DailyMedServer {
             const drugsByClass = await this.client.searchDrugsByPharmacologicClass(
               args.drugClassCode as string,
               args.codingSystem as string | undefined,
+              args.page as number,
+              args.pageSize as number,
             );
             return {
               content: [
