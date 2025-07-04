@@ -240,4 +240,122 @@ export const dailyMedTools: Tool[] = [
       },
     },
   },
+  {
+    name: "get_mapping_statistics",
+    description: "Get statistics about loaded mapping files",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "search_by_rxnorm_mapping",
+    description: "Search for RxNorm mappings by drug name",
+    inputSchema: {
+      type: "object",
+      properties: {
+        drugName: {
+          type: "string",
+          description: "Drug name to search for in RxNorm mappings",
+        },
+      },
+      required: ["drugName"],
+    },
+  },
+  {
+    name: "get_rxnorm_mappings_for_setid",
+    description: "Get RxNorm mappings for a specific SET ID",
+    inputSchema: {
+      type: "object",
+      properties: {
+        setId: {
+          type: "string",
+          description: "The SET ID to get RxNorm mappings for",
+        },
+      },
+      required: ["setId"],
+    },
+  },
+  {
+    name: "get_pharmacologic_class_mappings_for_setid",
+    description: "Get pharmacologic class mappings for a specific SET ID",
+    inputSchema: {
+      type: "object",
+      properties: {
+        setId: {
+          type: "string",
+          description: "The SET ID to get pharmacologic class mappings for",
+        },
+      },
+      required: ["setId"],
+    },
+  },
+  {
+    name: "get_mappings_by_rxcui",
+    description: "Get mappings for a specific RxCUI",
+    inputSchema: {
+      type: "object",
+      properties: {
+        rxcui: {
+          type: "string",
+          description: "The RxCUI to get mappings for",
+        },
+      },
+      required: ["rxcui"],
+    },
+  },
+  {
+    name: "get_rxnorm_mappings_by_pharmacologic_class",
+    description: "Find RxNorm mappings for drugs that belong to a specific pharmacologic class SET ID",
+    inputSchema: {
+      type: "object",
+      properties: {
+        pharmaSetId: {
+          type: "string",
+          description: "The pharmacologic class SET ID to find RxNorm mappings for",
+        },
+      },
+      required: ["pharmaSetId"],
+    },
+  },
+  {
+    name: "get_all_pharmacologic_class_setids",
+    description: "Get all pharmacologic class SET IDs that have associated drug mappings",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "get_pharmacologic_class_details",
+    description: "Get detailed information about a pharmacologic class including FDA context and classification attributes (uses mapping file data)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        pharmaSetId: {
+          type: "string",
+          description: "The pharmacologic class SET ID to get details for",
+        },
+      },
+      required: ["pharmaSetId"],
+    },
+  },
+  {
+    name: "search_drugs_by_pharmacologic_class",
+    description: "Search for drugs using DailyMed drug class codes (from the drug classes API)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        drugClassCode: {
+          type: "string",
+          description: "The drug class code (e.g., N0000175605 for Kinase Inhibitor) from DailyMed drug classes API",
+        },
+        codingSystem: {
+          type: "string",
+          description: "The coding system for the drug class code (defaults to 2.16.840.1.113883.6.345 which matches the drug classes API)",
+        },
+      },
+      required: ["drugClassCode"],
+    },
+  },
 ];

@@ -284,6 +284,120 @@ class DailyMedServer {
               ],
             };
 
+          case "get_mapping_statistics":
+            const mappingStats = await this.client.getMappingStatistics();
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(mappingStats, null, 2),
+                },
+              ],
+            };
+
+          case "search_by_rxnorm_mapping":
+            const rxNormSearchResults = await this.client.searchByRxNormMapping(
+              args.drugName as string,
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(rxNormSearchResults, null, 2),
+                },
+              ],
+            };
+
+          case "get_rxnorm_mappings_for_setid":
+            const rxNormMappings = await this.client.getRxNormMappingsForSetId(
+              args.setId as string,
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(rxNormMappings, null, 2),
+                },
+              ],
+            };
+
+          case "get_pharmacologic_class_mappings_for_setid":
+            const pharmacologicClassMappings = await this.client.getPharmacologicClassMappingsForSetId(
+              args.setId as string,
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(pharmacologicClassMappings, null, 2),
+                },
+              ],
+            };
+
+          case "get_mappings_by_rxcui":
+            const rxcuiMappings = await this.client.getMappingsByRxCUI(
+              args.rxcui as string,
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(rxcuiMappings, null, 2),
+                },
+              ],
+            };
+
+          case "get_rxnorm_mappings_by_pharmacologic_class":
+            const pharmaClassMappings = await this.client.getRxNormMappingsByPharmacologicClass(
+              args.pharmaSetId as string,
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(pharmaClassMappings, null, 2),
+                },
+              ],
+            };
+
+          case "get_all_pharmacologic_class_setids":
+            const allPharmaSetIds = await this.client.getAllPharmacologicClassSetIds();
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(allPharmaSetIds, null, 2),
+                },
+              ],
+            };
+
+          case "get_pharmacologic_class_details":
+            const pharmaClassDetails = await this.client.getPharmacologicClassDetails(
+              args.pharmaSetId as string,
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(pharmaClassDetails, null, 2),
+                },
+              ],
+            };
+
+          case "search_drugs_by_pharmacologic_class":
+            const drugsByClass = await this.client.searchDrugsByPharmacologicClass(
+              args.drugClassCode as string,
+              args.codingSystem as string | undefined,
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(drugsByClass, null, 2),
+                },
+              ],
+            };
+
           default:
             throw new Error(`Unknown tool: ${name}`);
         }

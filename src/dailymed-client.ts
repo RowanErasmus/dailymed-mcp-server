@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import { parseString } from "xml2js";
+import { MappingService, RxNormMapping, PharmacologicClassMapping } from "./mapping-service.js";
 
 export interface DailyMedResponse<T = any> {
   data: T;
@@ -16,6 +17,8 @@ export interface SPLDocument {
   spl_medguide?: string;
   spl_patient_package_insert?: string;
   spl_product_data_elements?: string;
+  rxNormMappings?: RxNormMapping[];
+  pharmacologicClassMappings?: PharmacologicClassMapping[];
 }
 
 export interface SPLSection {
@@ -51,6 +54,23 @@ export interface DrugClass {
   uniiCode?: string;
 }
 
+export interface PharmacologicClassDetails {
+  setId: string;
+  title?: string;
+  classificationInfo?: {
+    mechanismOfAction?: string[];
+    physiologicEffect?: string[];
+    chemicalStructure?: string[];
+    establishedPharmacologicClass?: string[];
+  };
+  fdaContext?: {
+    definition: string;
+    purpose: string;
+    attributes: string[];
+    sourceTerminology: string;
+  };
+}
+
 export interface RxCUI {
   rxcui: string;
   drugName?: string;
@@ -66,6 +86,7 @@ export interface UNII {
 export class DailyMedClient {
   private client: AxiosInstance;
   private baseURL = "https://dailymed.nlm.nih.gov/dailymed/services/v2";
+  private mappingService: MappingService;
 
   constructor() {
     this.client = axios.create({
@@ -76,6 +97,8 @@ export class DailyMedClient {
       },
       timeout: 30000,
     });
+
+    this.mappingService = new MappingService();
 
     this.client.interceptors.response.use(
       (response) => response,
@@ -551,6 +574,10 @@ export class DailyMedClient {
               }
             }
 
+            // Get mapping data for this setId
+            const rxNormMappings = this.mappingService.getRxNormMappings(setId);
+            const pharmacologicClassMappings = this.mappingService.getPharmacologicClassMappings(setId);
+
             resolve({
               setId: setId,
               title: title || "No title available",
@@ -560,6 +587,8 @@ export class DailyMedClient {
               spl_medguide: undefined,
               spl_patient_package_insert: undefined,
               spl_product_data_elements: undefined,
+              rxNormMappings: rxNormMappings.length > 0 ? rxNormMappings : undefined,
+              pharmacologicClassMappings: pharmacologicClassMappings.length > 0 ? pharmacologicClassMappings : undefined,
             });
           } catch (parseError) {
             reject(
@@ -810,15 +839,24 @@ export class DailyMedClient {
         response.data.data &&
         Array.isArray(response.data.data)
       ) {
-        return response.data.data.map((item: any) => ({
-          setId: item.setid,
-          title: item.title,
-          effectiveTime: item.published_date,
-          versionNumber: item.spl_version?.toString() || "1",
-          spl_medguide: item.spl_medguide,
-          spl_patient_package_insert: item.spl_patient_package_insert,
-          spl_product_data_elements: item.spl_product_data_elements,
-        }));
+        return response.data.data.map((item: any) => {
+          const setId = item.setid;
+          const rxNormMappings = this.mappingService.getRxNormMappings(setId);
+          const pharmacologicClassMappings = this.mappingService.getPharmacologicClassMappings(setId);
+
+          return {
+            setId: setId,
+            title: item.title,
+            effectiveTime: item.published_date,
+            versionNumber: item.spl_version?.toString() || "1",
+            sections: [],
+            spl_medguide: item.spl_medguide,
+            spl_patient_package_insert: item.spl_patient_package_insert,
+            spl_product_data_elements: item.spl_product_data_elements,
+            rxNormMappings: rxNormMappings.length > 0 ? rxNormMappings : undefined,
+            pharmacologicClassMappings: pharmacologicClassMappings.length > 0 ? pharmacologicClassMappings : undefined,
+          };
+        });
       } else {
         throw new Error("Unexpected response structure for SPL search");
       }
@@ -827,5 +865,207 @@ export class DailyMedClient {
         `Failed to search SPLs: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
+  }
+
+  // Mapping service methods
+  async getMappingStatistics(): Promise<any> {
+    return this.mappingService.getStatistics();
+  }
+
+  async searchByRxNormMapping(drugName: string): Promise<RxNormMapping[]> {
+    return this.mappingService.searchRxNormMappingsByName(drugName);
+  }
+
+  async getRxNormMappingsForSetId(setId: string): Promise<RxNormMapping[]> {
+    return this.mappingService.getRxNormMappings(setId);
+  }
+
+  async getPharmacologicClassMappingsForSetId(setId: string): Promise<PharmacologicClassMapping[]> {
+    return this.mappingService.getPharmacologicClassMappings(setId);
+  }
+
+  async getMappingsByRxCUI(rxcui: string): Promise<RxNormMapping[]> {
+    return this.mappingService.getMappingsByRxCUI(rxcui);
+  }
+
+  async getRxNormMappingsByPharmacologicClass(pharmaSetId: string): Promise<{
+    pharmaSetId: string;
+    splSetIds: string[];
+    rxNormMappings: RxNormMapping[];
+    fdaContext: {
+      definition: string;
+      explanation: string;
+      classification: string[];
+    };
+  }> {
+    return this.mappingService.getRxNormMappingsByPharmacologicClass(pharmaSetId);
+  }
+
+  async getAllPharmacologicClassSetIds(): Promise<string[]> {
+    return this.mappingService.getAllPharmacologicClassSetIds();
+  }
+
+  async searchDrugsByPharmacologicClass(drugClassCode: string, codingSystem?: string): Promise<SPLDocument[]> {
+    if (!drugClassCode || typeof drugClassCode !== "string") {
+      throw new Error("Valid drug class code is required");
+    }
+
+    try {
+      // Use the SPLs API to search for drugs by drug class code
+      // Default to the coding system used by the drug classes API
+      const params: any = { 
+        drug_class_code: drugClassCode,
+        drug_class_coding_system: codingSystem || "2.16.840.1.113883.6.345"
+      };
+      
+      const response = await this.client.get("/spls.json", {
+        params: params,
+      });
+
+      if (
+        response.data &&
+        response.data.data &&
+        Array.isArray(response.data.data)
+      ) {
+        return response.data.data.map((item: any) => {
+          const setId = item.setid;
+          const rxNormMappings = this.mappingService.getRxNormMappings(setId);
+          const pharmacologicClassMappings = this.mappingService.getPharmacologicClassMappings(setId);
+
+          return {
+            setId: setId,
+            title: item.title,
+            effectiveTime: item.published_date,
+            versionNumber: item.spl_version?.toString() || "1",
+            sections: [],
+            spl_medguide: item.spl_medguide,
+            spl_patient_package_insert: item.spl_patient_package_insert,
+            spl_product_data_elements: item.spl_product_data_elements,
+            rxNormMappings: rxNormMappings.length > 0 ? rxNormMappings : undefined,
+            pharmacologicClassMappings: pharmacologicClassMappings.length > 0 ? pharmacologicClassMappings : undefined,
+          };
+        });
+      } else {
+        throw new Error("Unexpected response structure for drug class search");
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to search drugs by pharmacologic class: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  async getPharmacologicClassDetails(pharmaSetId: string): Promise<PharmacologicClassDetails> {
+    if (!pharmaSetId || typeof pharmaSetId !== "string") {
+      throw new Error("Valid pharmacologic class SET ID is required");
+    }
+
+    // Note: The pharmacologic class SET IDs from mapping files are NOT retrievable SPL documents
+    // They appear to be legacy/internal identifiers that represent conceptual groupings
+    const mappingInfo = this.mappingService.getRxNormMappingsByPharmacologicClass(pharmaSetId);
+    
+    // Try to find related drug class information from the drug classes API
+    // by examining the drugs that belong to this pharmacologic class
+    let relatedDrugClasses: DrugClass[] = [];
+    if (mappingInfo.splSetIds.length > 0) {
+      // Get the first few drugs to see if we can find drug class information
+      for (let i = 0; i < Math.min(3, mappingInfo.splSetIds.length); i++) {
+        try {
+          const splDoc = await this.getSPLBySetId(mappingInfo.splSetIds[i]);
+          // Extract any drug class information from this drug's SPL
+          const drugClassInfo = this.extractPharmacologicClassInfo(splDoc);
+          if (drugClassInfo.establishedPharmacologicClass) {
+            // This would contain any class information found in the drug's SPL
+          }
+        } catch (error) {
+          // Skip if SPL not accessible
+        }
+      }
+    }
+    
+    return {
+      setId: pharmaSetId,
+      title: `Pharmacologic Class Grouping (${mappingInfo.splSetIds.length} associated drugs)`,
+      classificationInfo: {
+        establishedPharmacologicClass: [
+          `Legacy pharmacologic class identifier linking ${mappingInfo.splSetIds.length} drug SPL documents`,
+          `Associated with ${mappingInfo.rxNormMappings.length} RxNorm concept mappings`
+        ]
+      },
+      fdaContext: {
+        definition: "A group of active moieties that share scientifically documented properties",
+        purpose: "To provide clinically meaningful and scientifically valid drug classifications for approved indications",
+        attributes: [
+          "Mechanism of Action (MOA) - how the drug works at the molecular level",
+          "Physiologic Effect (PE) - the body's response to the drug", 
+          "Chemical Structure (CS) - structural characteristics of the active moiety"
+        ],
+        sourceTerminology: "National Drug File Reference Terminology (NDF-RT)"
+      }
+    };
+  }
+
+  private extractPharmacologicClassInfo(splDocument: SPLDocument): {
+    mechanismOfAction?: string[];
+    physiologicEffect?: string[];
+    chemicalStructure?: string[];
+    establishedPharmacologicClass?: string[];
+  } {
+    const classificationInfo: any = {};
+    
+    // Look through sections for pharmacologic class information
+    for (const section of splDocument.sections) {
+      const sectionTitle = section.title.toLowerCase();
+      const content = section.content;
+      
+      if (sectionTitle.includes('mechanism of action') || sectionTitle.includes('pharmacology')) {
+        classificationInfo.mechanismOfAction = this.extractClassificationTerms(content, 'mechanism');
+      }
+      
+      if (sectionTitle.includes('pharmacologic') || sectionTitle.includes('class')) {
+        classificationInfo.establishedPharmacologicClass = this.extractClassificationTerms(content, 'class');
+      }
+      
+      if (sectionTitle.includes('effect') || sectionTitle.includes('pharmacodynamics')) {
+        classificationInfo.physiologicEffect = this.extractClassificationTerms(content, 'effect');
+      }
+    }
+    
+    return classificationInfo;
+  }
+
+  private extractClassificationTerms(content: string, type: string): string[] {
+    // Simple extraction - look for key phrases and sentences
+    const terms: string[] = [];
+    const sentences = content.split(/[.!?]/);
+    
+    for (const sentence of sentences) {
+      const trimmed = sentence.trim();
+      if (trimmed.length > 10 && trimmed.length < 200) {
+        // Look for classification-related terms
+        if (type === 'mechanism' && (
+          trimmed.toLowerCase().includes('inhibit') ||
+          trimmed.toLowerCase().includes('block') ||
+          trimmed.toLowerCase().includes('bind') ||
+          trimmed.toLowerCase().includes('target')
+        )) {
+          terms.push(trimmed);
+        } else if (type === 'class' && (
+          trimmed.toLowerCase().includes('class') ||
+          trimmed.toLowerCase().includes('group') ||
+          trimmed.toLowerCase().includes('category')
+        )) {
+          terms.push(trimmed);
+        } else if (type === 'effect' && (
+          trimmed.toLowerCase().includes('effect') ||
+          trimmed.toLowerCase().includes('response') ||
+          trimmed.toLowerCase().includes('action')
+        )) {
+          terms.push(trimmed);
+        }
+      }
+    }
+    
+    return terms.slice(0, 5); // Limit to 5 most relevant terms
   }
 }

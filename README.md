@@ -16,6 +16,7 @@ This MCP server enables AI assistants to access comprehensive drug information f
 - FDA application numbers
 - RxCUI and UNII codes
 - Drug packaging and media information
+- Enhanced mapping data linking SPLs to RxNorm concepts and pharmacologic classes
 
 ## Installation
 
@@ -24,7 +25,10 @@ This MCP server enables AI assistants to access comprehensive drug information f
    ```bash
    npm install
    ```
-3. Build the TypeScript code:
+3. Add the mapping files to the project root (optional but recommended):
+   - Download `pharmacologic_class_mappings.txt` and `rxnorm_mappings.txt` from [DailyMed Mapping Files](https://dailymed.nlm.nih.gov/dailymed/app-support-mapping-files.cfm)
+   - Place them in the project root directory alongside `package.json`
+4. Build the TypeScript code:
    ```bash
    npm run build
    ```
@@ -75,6 +79,18 @@ The server provides the following tools:
 - `get_all_uniis` - Get all available UNII codes
 - `get_all_application_numbers` - Get all available FDA application numbers
 
+#### Mapping Tools
+
+- `get_mapping_statistics` - Get statistics about loaded mapping files
+- `search_by_rxnorm_mapping` - Search for RxNorm mappings by drug name
+- `get_rxnorm_mappings_for_setid` - Get RxNorm mappings for a specific SET ID
+- `get_pharmacologic_class_mappings_for_setid` - Get pharmacologic class mappings for a specific SET ID
+- `get_mappings_by_rxcui` - Get mappings for a specific RxCUI
+- `get_rxnorm_mappings_by_pharmacologic_class` - Find RxNorm mappings for drugs in a specific pharmacologic class (uses mapping file data)
+- `get_all_pharmacologic_class_setids` - Get all pharmacologic class SET IDs with drug mappings (from mapping files)
+- `get_pharmacologic_class_details` - Get detailed information about a pharmacologic class (uses mapping file data)
+- `search_drugs_by_pharmacologic_class` - Search for drugs using DailyMed drug class codes from the drug classes API
+
 ### Configuration with Claude Desktop
 
 Add this server to your Claude Desktop configuration:
@@ -110,6 +126,37 @@ The server includes comprehensive error handling for:
 - Network timeouts
 - Rate limiting
 
+## Mapping Files
+
+The server supports enhanced functionality when mapping files are present in the project root:
+
+- **pharmacologic_class_mappings.txt**: Maps SPL SET IDs to pharmacologic class information
+- **rxnorm_mappings.txt**: Maps SPL SET IDs to RxNorm concepts (RxCUI, drug names, term types)
+
+These files enable:
+- Enhanced drug detail responses with RxNorm and pharmacologic class mappings
+- Direct mapping lookups by SET ID or RxCUI
+- Drug name searches within mapping data
+- Statistics about mapping coverage
+- Cross-referencing drugs by pharmacologic class characteristics
+
+### Understanding Pharmacologic Classes
+
+According to FDA guidelines, a **pharmacologic class** is "a group of active moieties that share scientifically documented properties." These classifications are based on three key attributes:
+
+1. **Mechanism of Action (MOA)** - How the drug works at the molecular level
+2. **Physiologic Effect (PE)** - The body's response to the drug  
+3. **Chemical Structure (CS)** - Structural characteristics of the active moiety
+
+The FDA establishes "Established Pharmacologic Class" (EPC) text phrases that are scientifically valid and clinically meaningful. The source terminology is the National Drug File Reference Terminology (NDF-RT) maintained by the Department of Veterans Affairs.
+
+This server provides tools to explore these relationships and understand how drugs are classified and grouped by their shared properties.
+
+**Important Distinction:**
+- **Mapping File Data**: The pharmacologic class SET IDs in mapping files are identifiers that group related drugs conceptually
+- **DailyMed Drug Classes API**: Provides current, active drug class codes (like N0000175605) that can be used to search for drugs
+- Both approaches provide valuable but different perspectives on drug classification
+
 ## Development
 
 ### Project Structure
@@ -118,6 +165,7 @@ The server includes comprehensive error handling for:
 src/
 ├── index.ts           # Main MCP server implementation
 ├── dailymed-client.ts # DailyMed API client
+├── mapping-service.ts # Mapping file parser and service
 └── tools.ts           # Tool definitions
 ```
 
