@@ -120,7 +120,10 @@ class DailyMedServer {
             };
 
           case "get_all_drug_names":
-            const allDrugNames = await this.client.getAllDrugNames();
+            const allDrugNames = await this.client.getAllDrugNames(
+              args.page as number,
+              args.pageSize as number,
+            );
             return {
               content: [
                 {
@@ -131,7 +134,10 @@ class DailyMedServer {
             };
 
           case "get_all_drug_classes":
-            const allDrugClasses = await this.client.getAllDrugClasses();
+            const allDrugClasses = await this.client.getAllDrugClasses(
+              args.page as number,
+              args.pageSize as number,
+            );
             return {
               content: [
                 {
@@ -142,7 +148,10 @@ class DailyMedServer {
             };
 
           case "get_all_ndcs":
-            const allNDCs = await this.client.getAllNDCs();
+            const allNDCs = await this.client.getAllNDCs(
+              args.page as number,
+              args.pageSize as number,
+            );
             return {
               content: [
                 {
@@ -153,7 +162,10 @@ class DailyMedServer {
             };
 
           case "get_all_rxcuis":
-            const allRxCUIs = await this.client.getAllRxCUIs();
+            const allRxCUIs = await this.client.getAllRxCUIs(
+              args.page as number,
+              args.pageSize as number,
+            );
             return {
               content: [
                 {
@@ -164,7 +176,10 @@ class DailyMedServer {
             };
 
           case "get_all_uniis":
-            const allUNIIs = await this.client.getAllUNIIs();
+            const allUNIIs = await this.client.getAllUNIIs(
+              args.page as number,
+              args.pageSize as number,
+            );
             return {
               content: [
                 {
@@ -175,7 +190,10 @@ class DailyMedServer {
             };
 
           case "get_all_application_numbers":
-            const allAppNumbers = await this.client.getAllApplicationNumbers();
+            const allAppNumbers = await this.client.getAllApplicationNumbers(
+              args.page as number,
+              args.pageSize as number,
+            );
             return {
               content: [
                 {
@@ -224,6 +242,8 @@ class DailyMedServer {
             if (args.rxstring) rxcuiParams.rxstring = args.rxstring as string;
             if (args.rxcui) rxcuiParams.rxcui = args.rxcui as string;
             if (args.rxtty) rxcuiParams.rxtty = args.rxtty as string;
+            if (args.page) rxcuiParams.page = args.page as number;
+            if (args.pageSize) rxcuiParams.pageSize = args.pageSize as number;
 
             const rxcuiResults = await this.client.searchRxCUIs(rxcuiParams);
             return {
@@ -231,6 +251,26 @@ class DailyMedServer {
                 {
                   type: "text",
                   text: JSON.stringify(rxcuiResults, null, 2),
+                },
+              ],
+            };
+
+          case "search_uniis":
+            const uniiParams: any = {};
+            if (args.active_moiety) uniiParams.active_moiety = args.active_moiety as string;
+            if (args.drug_class_code) uniiParams.drug_class_code = args.drug_class_code as string;
+            if (args.drug_class_coding_system) uniiParams.drug_class_coding_system = args.drug_class_coding_system as string;
+            if (args.rxcui) uniiParams.rxcui = args.rxcui as string;
+            if (args.unii_code) uniiParams.unii_code = args.unii_code as string;
+            if (args.page) uniiParams.page = args.page as number;
+            if (args.pageSize) uniiParams.pageSize = args.pageSize as number;
+
+            const uniiResults = await this.client.searchUNIIs(uniiParams);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(uniiResults, null, 2),
                 },
               ],
             };
@@ -245,13 +285,34 @@ class DailyMedServer {
                 args.marketing_category_code as string;
             if (args.setid) appNumParams.setid = args.setid as string;
 
-            const appNumResults =
-              await this.client.searchApplicationNumbers(appNumParams);
+            // Add pagination parameters
+            if (args.page) appNumParams.page = args.page as number;
+            if (args.pageSize) appNumParams.pageSize = args.pageSize as number;
+
+            const appNumResults = await this.client.searchApplicationNumbersAdvanced(appNumParams);
             return {
               content: [
                 {
                   type: "text",
                   text: JSON.stringify(appNumResults, null, 2),
+                },
+              ],
+            };
+
+          case "search_drug_names":
+            const drugNameParams: any = {};
+            if (args.drug_name) drugNameParams.drug_name = args.drug_name as string;
+            if (args.name_type) drugNameParams.name_type = args.name_type as string;
+            if (args.manufacturer) drugNameParams.manufacturer = args.manufacturer as string;
+            if (args.page) drugNameParams.page = args.page as number;
+            if (args.pageSize) drugNameParams.pageSize = args.pageSize as number;
+
+            const drugNameResults = await this.client.searchDrugNamesAdvanced(drugNameParams);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(drugNameResults, null, 2),
                 },
               ],
             };
@@ -270,8 +331,11 @@ class DailyMedServer {
             if (args.unii_code)
               drugClassParams.unii_code = args.unii_code as string;
 
-            const drugClassResults =
-              await this.client.searchDrugClasses(drugClassParams);
+            // Add pagination parameters
+            if (args.page) drugClassParams.page = args.page as number;
+            if (args.pageSize) drugClassParams.pageSize = args.pageSize as number;
+
+            const drugClassResults = await this.client.searchDrugClassesAdvanced(drugClassParams);
             return {
               content: [
                 {

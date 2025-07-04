@@ -82,51 +82,122 @@ export const dailyMedTools: Tool[] = [
   },
   {
     name: "get_all_drug_names",
-    description: "Get all available drug names in the DailyMed database",
+    description: "Get all available drug names in the DailyMed database with pagination support",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 100, max: 100)",
+          minimum: 1,
+          maximum: 100,
+        },
+      },
     },
   },
   {
     name: "get_all_drug_classes",
-    description: "Get all available drug classes in the DailyMed database",
+    description: "Get all available drug classes in the DailyMed database with pagination support",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 100, max: 100)",
+          minimum: 1,
+          maximum: 100,
+        },
+      },
     },
   },
   {
     name: "get_all_ndcs",
-    description: "Get all available NDC codes in the DailyMed database",
+    description: "Get all available NDC codes in the DailyMed database with pagination support",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 25, max: 100)",
+          minimum: 1,
+          maximum: 100,
+        },
+      },
     },
   },
   {
     name: "get_all_rxcuis",
-    description: "Get all available RxCUI codes in the DailyMed database",
+    description: "Get all available RxCUI codes in the DailyMed database with pagination support",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 25, max: 100)",
+          minimum: 1,
+          maximum: 100,
+        },
+      },
     },
   },
   {
     name: "get_all_uniis",
-    description: "Get all available UNII codes in the DailyMed database",
+    description: "Get all available UNII codes in the DailyMed database with pagination support",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 25, max: 100)",
+          minimum: 1,
+          maximum: 100,
+        },
+      },
     },
   },
   {
     name: "get_all_application_numbers",
-    description:
-      "Get all available FDA application numbers in the DailyMed database",
+    description: "Get all available FDA application numbers in the DailyMed database with pagination support",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 100, max: 100)",
+          minimum: 1,
+          maximum: 100,
+        },
+      },
     },
   },
   {
@@ -243,7 +314,7 @@ export const dailyMedTools: Tool[] = [
   },
   {
     name: "search_rxcuis",
-    description: "Search for RxCUI codes using various parameters",
+    description: "Search for RxCUI codes using various parameters with pagination support",
     inputSchema: {
       type: "object",
       properties: {
@@ -257,16 +328,99 @@ export const dailyMedTools: Tool[] = [
         },
         rxtty: {
           type: "string",
-          description:
-            "Term Type of RxConcept (e.g., PSN, SBD, SCD, BPCK, GPCK, SY)",
+          description: "Term Type of RxConcept",
+          enum: ["PSN", "SBD", "SCD", "BPCK", "GPCK", "SY"],
+        },
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 25, max: 100)",
+          minimum: 1,
+          maximum: 100,
+        },
+      },
+    },
+  },
+  {
+    name: "search_drug_names",
+    description: "Search for drug names using various parameters with pagination support",
+    inputSchema: {
+      type: "object",
+      properties: {
+        drug_name: {
+          type: "string",
+          description: "Generic or brand name of drug",
+        },
+        name_type: {
+          type: "string",
+          description: "Specify name type",
+          enum: ["g", "generic", "b", "brand", "both"],
+        },
+        manufacturer: {
+          type: "string",
+          description: "Name of drug manufacturer",
+        },
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 100, max: 100)",
+          minimum: 1,
+          maximum: 100,
+        },
+      },
+    },
+  },
+  {
+    name: "search_uniis",
+    description: "Search for UNII codes using various parameters with pagination support",
+    inputSchema: {
+      type: "object",
+      properties: {
+        active_moiety: {
+          type: "string",
+          description: "Active moiety filter",
+        },
+        drug_class_code: {
+          type: "string",
+          description: "Drug class code filter",
+        },
+        drug_class_coding_system: {
+          type: "string",
+          description: "Drug class coding system filter",
+        },
+        rxcui: {
+          type: "string",
+          description: "RxCUI filter",
+        },
+        unii_code: {
+          type: "string",
+          description: "Specific UNII code to search for",
+        },
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 25, max: 100)",
+          minimum: 1,
+          maximum: 100,
         },
       },
     },
   },
   {
     name: "search_application_numbers",
-    description:
-      "Search for FDA application numbers (NDA, ANDA, etc.) using various parameters",
+    description: "Search for FDA application numbers (NDA, ANDA, etc.) using various parameters with pagination support",
     inputSchema: {
       type: "object",
       properties: {
@@ -282,13 +436,23 @@ export const dailyMedTools: Tool[] = [
           type: "string",
           description: "Set ID of a drug label",
         },
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 100, max: 100)",
+          minimum: 1,
+          maximum: 100,
+        },
       },
     },
   },
   {
     name: "search_drug_classes",
-    description:
-      "Search for pharmacologic drug classes using various parameters",
+    description: "Search for pharmacologic drug classes using various parameters with pagination support",
     inputSchema: {
       type: "object",
       properties: {
@@ -298,8 +462,7 @@ export const dailyMedTools: Tool[] = [
         },
         drug_class_coding_system: {
           type: "string",
-          description:
-            "Coding system (default: National Drug File Reference Terminology)",
+          description: "Coding system (default: National Drug File Reference Terminology)",
         },
         class_code_type: {
           type: "string",
@@ -313,6 +476,17 @@ export const dailyMedTools: Tool[] = [
         unii_code: {
           type: "string",
           description: "Unique Ingredient Identifier code",
+        },
+        page: {
+          type: "number",
+          description: "Page number for pagination (1-based, default: 1)",
+          minimum: 1,
+        },
+        pageSize: {
+          type: "number",
+          description: "Number of results per page (default: 100, max: 100)",
+          minimum: 1,
+          maximum: 100,
         },
       },
     },
