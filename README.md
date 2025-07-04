@@ -1,9 +1,23 @@
 # MCP Server for DailyMed
 
-A Model Context Protocol (MCP) server that provides access to the DailyMed drug information database through the
-National Library of Medicine's web services API.
+A Model Context Protocol (MCP) server that provides access to the DailyMed API.
 
 100% vibe coded, seems to work fine.
+
+## About DailyMed
+
+DailyMed is a comprehensive database provided by the National Library of Medicine (NLM) that contains official drug labeling information submitted to the FDA. It serves healthcare professionals, patients, researchers, and AI systems with the most recent drug labeling information for:
+
+- FDA-approved prescription and nonprescription drugs
+- Biological products, medical devices, and medical gases
+- Animal drugs and some FDA-regulated unapproved products
+
+**Key Features:**
+- Official FDA-submitted drug labeling information
+- Structured Product Labeling (SPL) standard format
+- Multiple data formats (HTML, PDF, XML)
+- Cross-references with RxNorm and pharmacologic classifications
+- Free public access with regular updates
 
 ## Overview
 
@@ -52,6 +66,10 @@ npm run dev
 ### Available Tools
 
 The server provides the following tools:
+
+#### Context and Information Tools
+
+- `get_dailymed_context` - Get comprehensive information about DailyMed database, its purpose, and when to use it
 
 #### Search Tools
 

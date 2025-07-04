@@ -2,6 +2,14 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const dailyMedTools: Tool[] = [
   {
+    name: "get_dailymed_context",
+    description: "Get comprehensive information about DailyMed database, its purpose, content types, and when to use it",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
     name: "search_drugs",
     description: "Search for drugs by name or active ingredient",
     inputSchema: {

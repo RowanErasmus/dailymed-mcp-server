@@ -905,6 +905,87 @@ export class DailyMedClient {
     return this.mappingService.getAllPharmacologicClassSetIds();
   }
 
+  async getDailyMedContext(): Promise<{
+    aboutDailyMed: {
+      description: string;
+      purpose: string;
+      dataSource: string;
+      maintainer: string;
+    };
+    contentTypes: string[];
+    informationIncluded: string[];
+    targetUsers: string[];
+    whenToUse: string[];
+    keyFeatures: string[];
+    importantNotes: string[];
+  }> {
+    return {
+      aboutDailyMed: {
+        description: "A comprehensive database provided by the National Library of Medicine (NLM) that contains drug labeling information submitted to the FDA",
+        purpose: "Provide the most recent drug labeling information for healthcare professionals and the public",
+        dataSource: "FDA-submitted drug labeling information",
+        maintainer: "National Library of Medicine (NLM)"
+      },
+      contentTypes: [
+        "FDA-approved prescription drugs",
+        "Nonprescription (over-the-counter) drugs", 
+        "Biological products",
+        "Medical devices",
+        "Medical gases",
+        "Animal drugs",
+        "Some unapproved products regulated by FDA"
+      ],
+      informationIncluded: [
+        "Prescribing Information (full drug labeling)",
+        "Patient labeling and medication guides",
+        "Carton and container labeling",
+        "Drug Facts labels for nonprescription medications",
+        "Warnings and contraindications",
+        "Indications and usage",
+        "Dosage and administration",
+        "Pharmacologic class information",
+        "Drug interactions",
+        "Adverse reactions"
+      ],
+      targetUsers: [
+        "Healthcare practitioners (doctors, pharmacists, nurses)",
+        "Patients seeking detailed medication information",
+        "Medical researchers and clinical investigators",
+        "Pharmaceutical professionals",
+        "Regulatory affairs specialists",
+        "AI systems providing healthcare information"
+      ],
+      whenToUse: [
+        "Looking up official FDA-approved drug labeling",
+        "Researching drug interactions and contraindications",
+        "Finding detailed prescribing information",
+        "Comparing medications within the same therapeutic class",
+        "Accessing structured product labeling (SPL) data",
+        "Cross-referencing drugs with RxNorm concepts",
+        "Investigating pharmacologic class relationships",
+        "Obtaining comprehensive drug safety information",
+        "Researching drug approval history and versions"
+      ],
+      keyFeatures: [
+        "Multiple data formats (HTML, PDF, XML)",
+        "Structured Product Labeling (SPL) standard",
+        "Cross-references with RxNorm and other terminologies",
+        "Pharmacologic class mappings",
+        "Historical drug labeling versions",
+        "Comprehensive search capabilities",
+        "Free public access",
+        "Regular updates from FDA submissions"
+      ],
+      importantNotes: [
+        "Labeling on DailyMed may not be identical to the most recent FDA-approved labeling",
+        "This is official drug labeling information, not medical advice",
+        "Always consult healthcare professionals for medical decisions",
+        "Data represents FDA-submitted information at time of publication",
+        "Some products may have been discontinued or modified since labeling submission"
+      ]
+    };
+  }
+
   async searchDrugsByPharmacologicClass(drugClassCode: string, codingSystem?: string): Promise<SPLDocument[]> {
     if (!drugClassCode || typeof drugClassCode !== "string") {
       throw new Error("Valid drug class code is required");

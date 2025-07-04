@@ -46,6 +46,17 @@ class DailyMedServer {
         }
 
         switch (name) {
+          case "get_dailymed_context":
+            const contextInfo = await this.client.getDailyMedContext();
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(contextInfo, null, 2),
+                },
+              ],
+            };
+
           case "search_drugs":
             const searchResults = await this.client.searchDrugNames(
               args.query as string,
