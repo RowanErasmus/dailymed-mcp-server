@@ -184,10 +184,10 @@ export class DailyMedClient {
         Array.isArray(response.data.data)
       ) {
         return response.data.data.map((item: any) => ({
-          drugClassName: item.drug_class_name || item.drugClassName,
-          drugClassCode: item.drug_class_code || item.drugClassCode,
-          drugClassCodingSystem: item.drug_class_coding_system,
-          classCodeType: item.class_code_type,
+          drugClassName: item.name,
+          drugClassCode: item.code,
+          drugClassCodingSystem: item.codingSystem,
+          classCodeType: item.type,
           uniiCode: item.unii_code,
         }));
       } else {
@@ -238,10 +238,10 @@ export class DailyMedClient {
         Array.isArray(response.data.data)
       ) {
         return response.data.data.map((item: any) => ({
-          drugClassName: item.drug_class_name || item.drugClassName,
-          drugClassCode: item.drug_class_code || item.drugClassCode,
-          drugClassCodingSystem: item.drug_class_coding_system,
-          classCodeType: item.class_code_type,
+          drugClassName: item.name,
+          drugClassCode: item.code,
+          drugClassCodingSystem: item.codingSystem,
+          classCodeType: item.type,
           uniiCode: item.unii_code,
         }));
       } else {

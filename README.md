@@ -53,6 +53,9 @@ The server provides the following tools:
 
 - `search_drugs` - Search for drugs by name or active ingredient
 - `search_spls` - Search for Structured Product Labels by title
+- `search_rxcuis` - Search for RxCUI codes using various parameters
+- `search_application_numbers` - Search for FDA application numbers (NDA, ANDA, etc.)
+- `search_drug_classes` - Search for pharmacologic drug classes
 
 #### Drug Information Tools
 
